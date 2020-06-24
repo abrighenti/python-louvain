@@ -58,21 +58,41 @@ class Status(object):
                 self.internals[count] = self.loops[node]
                 count += 1
         else:
+            diff=len(graph.nodes())-len(part)
+            minChiave=min(part.keys())
+            diff=diff-minChiave
+            if diff >0:
+                for key in part:
+                    part[key]+=diff
             for node in graph.nodes():
-                com = part[node]
-                self.node2com[node] = com
-                deg = float(graph.degree(node, weight=weight))
-                self.degrees[com] = self.degrees.get(com, 0) + deg
-                self.gdegrees[node] = deg
-                inc = 0.
-                for neighbor, datas in graph[node].items():
-                    edge_weight = datas.get(weight, 1)
-                    if edge_weight <= 0:
-                        error = "Bad graph type ({})".format(type(graph))
+                if node in part:
+                    com = part[node]
+                    self.node2com[node] = com
+                    deg = float(graph.degree(node, weight=weight))
+                    self.degrees[com] = self.degrees.get(com, 0) + deg
+                    self.gdegrees[node] = deg
+                    inc = 0.
+                    for neighbor, datas in graph[node].items():
+                        edge_weight = datas.get(weight, 1)
+                        if edge_weight <= 0:
+                            error = "Bad graph type ({})".format(type(graph))
+                            raise ValueError(error)
+                        if neighbor in part:
+                            if part[neighbor] == com:
+                                if neighbor == node:
+                                    inc += float(edge_weight)
+                                else:
+                                    inc += float(edge_weight) / 2.
+                    self.internals[com] = self.internals.get(com, 0) + inc
+                else:
+                    self.node2com[node] = count
+                    deg = float(graph.degree(node, weight=weight))
+                    if deg < 0:
+                        error = "Bad node degree ({})".format(deg)
                         raise ValueError(error)
-                    if part[neighbor] == com:
-                        if neighbor == node:
-                            inc += float(edge_weight)
-                        else:
-                            inc += float(edge_weight) / 2.
-                self.internals[com] = self.internals.get(com, 0) + inc
+                    self.degrees[count] = deg
+                    self.gdegrees[node] = deg
+                    edge_data = graph.get_edge_data(node, node, default={weight: 0})
+                    self.loops[node] = float(edge_data.get(weight, 1))
+                    self.internals[count] = self.loops[node]
+                    count += 1
